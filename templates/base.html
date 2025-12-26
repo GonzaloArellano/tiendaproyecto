@@ -14,10 +14,19 @@
 </head>
 <body>
     <div class="container">
-        <!-- Header Bar -->
+        <!-- Header Bar CON BOTONES DE LOGIN/LOGOUT -->
         <div class="header-bar">
             <div class="header-title">🃏 MUNDO CARTAS - {% block page_header %}Sistema de Gestión{% endblock %}</div>
-            <div class="header-info">Usuario: {{ user.username }} | Fecha: {% now "d/m/Y" %} | Hora: {% now "H:i" %}</div>
+            <div class="header-info">
+                {% if user.is_authenticated %}
+                    👤 {{ user.username }} ({{ user.perfilusuario.rol.nombre }}) | 
+                    <a href="{% url 'registration:logout' %}" style="color: white; text-decoration: none; font-weight: 600;">🚪 Salir</a>
+                {% else %}
+                    <a href="{% url 'registration:login' %}" style="color: white; text-decoration: none; font-weight: 600;">🔐 Iniciar Sesión</a> | 
+                    <a href="{% url 'registration:registro' %}" style="color: white; text-decoration: none; font-weight: 600;">📝 Registrarse</a>
+                {% endif %}
+                 | Fecha: {% now "d/m/Y" %} | Hora: {% now "H:i" %}
+            </div>
         </div>
         
         <!-- Toolbar -->
@@ -25,20 +34,26 @@
             {% block toolbar %}
             
             {% if user.is_authenticated %}
-                {% if user.perfilusuario.rol.nombre == 'Administrador' or user.perfilusuario.rol.nombre == 'Vendedor' %}
+                {% if user.perfilusuario.rol.nombre == 'Administrador' %}
+                    <!-- Toolbar para ADMINISTRADOR -->
                     <a href="{% url 'inventario:lista_productos' %}" class="toolbar-btn {% if 'inventario' in request.path and 'pos' not in request.path and 'ventas' not in request.path %}active{% endif %}">📋 Inventario</a>
                     <a href="{% url 'inventario:pos' %}" class="toolbar-btn {% if 'pos' in request.path %}active{% endif %}">💳 POS</a>
                     <a href="{% url 'inventario:lista_ventas' %}" class="toolbar-btn {% if 'ventas' in request.path %}active{% endif %}">📊 Ventas</a>
-                    <a href="{% url 'inventario:importar_productos' %}" class="toolbar-btn">📥 Importar</a>
+                    <a href="{% url 'inventario:importar_productos' %}" class="toolbar-btn {% if 'importar' in request.path %}active{% endif %}">📥 Importar</a>
+                    <a href="{% url 'registration:lista_vendedores' %}" class="toolbar-btn {% if 'vendedores' in request.path %}active{% endif %}">👥 Vendedores</a>
+                    <a href="{% url 'admin:index' %}" class="toolbar-btn">⚙️ Admin</a>
+                    <a href="{% url 'registration:perfil' %}" class="toolbar-btn {% if request.path == '/accounts/perfil/' %}active{% endif %}">👤 Mi Perfil</a>
                     
-                    {% if user.perfilusuario.rol.nombre == 'Administrador' %}
-                        <a href="{% url 'admin:index' %}" class="toolbar-btn">⚙️ Admin</a>
-                    {% endif %}
+                {% elif user.perfilusuario.rol.nombre == 'Vendedor' %}
+                    <!-- Toolbar para VENDEDOR -->
+                    <a href="{% url 'inventario:lista_productos' %}" class="toolbar-btn {% if 'inventario' in request.path and 'pos' not in request.path and 'ventas' not in request.path %}active{% endif %}">📋 Inventario</a>
+                    <a href="{% url 'inventario:pos' %}" class="toolbar-btn {% if 'pos' in request.path %}active{% endif %}">💳 POS</a>
+                    <a href="{% url 'inventario:lista_ventas' %}" class="toolbar-btn {% if 'ventas' in request.path %}active{% endif %}">📊 Mis Ventas</a>
+                    <a href="{% url 'inventario:importar_productos' %}" class="toolbar-btn {% if 'importar' in request.path %}active{% endif %}">📥 Importar</a>
+                    <a href="{% url 'registration:perfil' %}" class="toolbar-btn {% if request.path == '/accounts/perfil/' %}active{% endif %}">👤 Mi Perfil</a>
                     
-                    <a href="{% url 'registration:perfil' %}" class="toolbar-btn">👤 {{ user.username }}</a>
-                    <a href="{% url 'registration:logout' %}" class="toolbar-btn">🚪 Salir</a>
                 {% else %}
-                    <!-- Cliente -->
+                    <!-- Toolbar para CLIENTE -->
                     <a href="{% url 'carrito:catalogo' %}" class="toolbar-btn {% if request.resolver_match.url_name == 'catalogo' %}active{% endif %}">🏠 Catálogo</a>
                     <a href="{% url 'carrito:ver_carrito' %}" class="toolbar-btn {% if 'carrito' in request.path and request.resolver_match.url_name != 'catalogo' %}active{% endif %}">
                         🛒 Mi Carrito
@@ -48,13 +63,11 @@
                             </span>
                         {% endif %}
                     </a>
-                    <a href="{% url 'registration:perfil' %}" class="toolbar-btn">👤 {{ user.username }}</a>
-                    <a href="{% url 'registration:logout' %}" class="toolbar-btn">🚪 Salir</a>
+                    <a href="{% url 'registration:perfil' %}" class="toolbar-btn {% if request.path == '/accounts/perfil/' %}active{% endif %}">👤 Mi Perfil</a>
                 {% endif %}
             {% else %}
-                <a href="{% url 'carrito:catalogo' %}" class="toolbar-btn">🏠 Catálogo</a>
-                <a href="{% url 'registration:login' %}" class="toolbar-btn">🔐 Iniciar Sesión</a>
-                <a href="{% url 'registration:registro' %}" class="toolbar-btn">📝 Registrarse</a>
+                <!-- Toolbar para NO AUTENTICADO -->
+                <a href="{% url 'carrito:catalogo' %}" class="toolbar-btn {% if request.resolver_match.url_name == 'catalogo' %}active{% endif %}">🏠 Catálogo</a>
             {% endif %}
             
             {% endblock %}
