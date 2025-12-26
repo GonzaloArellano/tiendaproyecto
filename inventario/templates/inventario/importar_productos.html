@@ -1,0 +1,684 @@
+{% extends 'base.html' %}
+
+{% block title %}Importación Masiva - Mundo Cartas{% endblock %}
+
+{% block page_header %}Actualización Masiva de Stock{% endblock %}
+
+{% block toolbar %}
+<a href="{% url 'inventario:lista_productos' %}" class="toolbar-btn">← Volver al Inventario</a>
+<a href="{% url 'inventario:importar_productos' %}" class="toolbar-btn active">📥 Importar Stock</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Estilos específicos de importación (los que NO están en styles.css) */
+    .main-content-import {
+        padding: 20px;
+    }
+
+    .upload-section {
+        background: #f8f8f8;
+        border: 2px dashed #4472c4;
+        border-radius: 8px;
+        padding: 40px;
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .upload-icon {
+        font-size: 64px;
+        color: #4472c4;
+        margin-bottom: 20px;
+    }
+
+    .upload-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 10px;
+    }
+
+    .upload-subtitle {
+        font-size: 13px;
+        color: #666;
+        margin-bottom: 20px;
+    }
+
+    .upload-buttons {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .btn-upload {
+        padding: 12px 30px;
+        background: #4472c4;
+        color: white;
+        border: none;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        border-radius: 4px;
+    }
+
+    .btn-upload:hover {
+        background: #3a5ba0;
+    }
+
+    .btn-template {
+        padding: 12px 30px;
+        background: #28a745;
+        color: white;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        border-radius: 4px;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .btn-template:hover {
+        background: #218838;
+    }
+
+    .file-info {
+        background: white;
+        border: 1px solid #d0d0d0;
+        padding: 15px;
+        margin-bottom: 20px;
+        display: none;
+    }
+
+    .file-info.active {
+        display: block;
+    }
+
+    .file-name {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 5px;
+    }
+
+    .file-details {
+        font-size: 12px;
+        color: #666;
+    }
+
+    .submit-section {
+        background: white;
+        border: 1px solid #d0d0d0;
+        padding: 20px;
+        margin-top: 20px;
+        text-align: center;
+    }
+
+    .btn-submit {
+        padding: 14px 40px;
+        background: #28a745;
+        color: white;
+        border: none;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        border-radius: 4px;
+        text-transform: uppercase;
+    }
+
+    .btn-submit:hover {
+        background: #218838;
+    }
+
+    .btn-cancel {
+        padding: 14px 40px;
+        background: #6c757d;
+        color: white;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        border-radius: 4px;
+        text-transform: uppercase;
+        margin-left: 10px;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .btn-cancel:hover {
+        background: #5a6268;
+    }
+
+    /* Pop up de errores */
+    .custom-errors-alert {
+        background: linear-gradient(135deg, #fff3cd 0%, #ffe8a1 100%);
+        border: 3px solid #ffc107;
+        border-left: 8px solid #dc3545;
+        padding: 25px 30px;
+        margin-bottom: 30px;
+        border-radius: 6px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 4px 12px rgba(220, 53, 69, 0.2);
+        animation: slideIn 0.5s ease-out;
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .custom-errors-content {
+        flex: 1;
+        padding-right: 20px;
+    }
+
+    .custom-errors-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: #721c24;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .custom-errors-message {
+        font-size: 14px;
+        color: #856404;
+        line-height: 1.8;
+        margin-top: 5px;
+    }
+
+    .custom-btn-view-errors {
+        padding: 15px 35px;
+        background: #dc3545;
+        color: white;
+        border: none;
+        font-size: 15px;
+        font-weight: 700;
+        cursor: pointer;
+        border-radius: 6px;
+        text-transform: uppercase;
+        transition: all 0.3s;
+        white-space: nowrap;
+        box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+        letter-spacing: 0.5px;
+    }
+
+    .custom-btn-view-errors:hover {
+        background: #c82333;
+        transform: translateY(-3px);
+        box-shadow: 0 6px 16px rgba(220, 53, 69, 0.4);
+    }
+
+    .custom-btn-view-errors:active {
+        transform: translateY(-1px);
+    }
+
+    /* MODAL DE ERRORES */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.75);
+        z-index: 9999;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+        animation: fadeIn 0.3s ease-out;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    .modal-overlay.active {
+        display: flex;
+    }
+
+    .modal-content {
+        background: white;
+        border: 3px solid #dc3545;
+        border-radius: 8px;
+        max-width: 1000px;
+        width: 100%;
+        max-height: 85vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 15px 50px rgba(0, 0, 0, 0.4);
+        animation: modalSlideIn 0.4s ease-out;
+    }
+
+    @keyframes modalSlideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-80px) scale(0.95);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    .modal-header {
+        background: linear-gradient(135deg, #dc3545 0%, #bd2130 100%);
+        color: white;
+        padding: 25px 30px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-radius: 5px 5px 0 0;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .modal-title {
+        font-size: 22px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        letter-spacing: 0.5px;
+    }
+
+    .modal-close {
+        background: rgba(255, 255, 255, 0.2);
+        border: 2px solid white;
+        color: white;
+        font-size: 28px;
+        font-weight: bold;
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        transition: all 0.3s;
+        line-height: 1;
+    }
+
+    .modal-close:hover {
+        background: white;
+        color: #dc3545;
+        transform: rotate(90deg) scale(1.1);
+    }
+
+    .modal-body {
+        padding: 30px;
+        overflow-y: auto;
+        flex: 1;
+        background: #fafafa;
+    }
+
+    .error-summary {
+        background: white;
+        border: 2px solid #f0d06c;
+        border-left: 5px solid #ffc107;
+        padding: 20px;
+        margin-bottom: 25px;
+        border-radius: 6px;
+        font-size: 14px;
+        color: #856404;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    }
+
+    .error-summary strong {
+        color: #664d03;
+        font-size: 15px;
+        display: block;
+        margin-bottom: 8px;
+    }
+
+    .errors-container {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .error-item-modal {
+        background: white;
+        border-left: 6px solid #dc3545;
+        padding: 18px 25px;
+        border-radius: 6px;
+        transition: all 0.2s;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    }
+
+    .error-item-modal:hover {
+        background: #fff5f5;
+        transform: translateX(8px);
+        box-shadow: 0 4px 12px rgba(220, 53, 69, 0.15);
+    }
+
+    .error-number {
+        display: inline-block;
+        background: #dc3545;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 15px;
+        font-weight: bold;
+        font-size: 13px;
+        margin-right: 15px;
+        min-width: 35px;
+        text-align: center;
+    }
+
+    .error-text {
+        color: #721c24;
+        font-size: 14px;
+        line-height: 1.7;
+        display: inline;
+    }
+
+    .modal-footer {
+        background: #f8f8f8;
+        padding: 20px 30px;
+        border-top: 2px solid #e0e0e0;
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        border-radius: 0 0 5px 5px;
+    }
+
+    .btn-modal-close {
+        padding: 12px 30px;
+        background: #6c757d;
+        color: white;
+        border: none;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        border-radius: 5px;
+        transition: all 0.2s;
+    }
+
+    .btn-modal-close:hover {
+        background: #5a6268;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Template example */
+    .template-example {
+        background: white;
+        border: 1px solid #d0d0d0;
+        padding: 15px;
+        margin-top: 20px;
+    }
+
+    .template-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 10px;
+    }
+
+    .excel-preview {
+        border: 1px solid #d0d0d0;
+        overflow-x: auto;
+    }
+
+    .excel-header {
+        background: #217346;
+        color: white;
+        padding: 8px;
+        display: grid;
+        grid-template-columns: 120px 250px 120px 120px 200px 100px 80px;
+        font-size: 12px;
+        font-weight: 600;
+        gap: 1px;
+    }
+
+    .excel-row {
+        display: grid;
+        grid-template-columns: 120px 250px 120px 120px 200px 100px 80px;
+        border-bottom: 1px solid #e0e0e0;
+        font-size: 12px;
+        gap: 1px;
+    }
+
+    .excel-row:nth-child(even) {
+        background: #f8f8f8;
+    }
+
+    .excel-cell {
+        padding: 8px;
+        border-right: 1px solid #e0e0e0;
+    }
+
+    .excel-cell:last-child {
+        border-right: none;
+    }
+
+    .excel-cell-code {
+        font-family: 'Courier New', monospace;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="main-content-import">
+    <div class="section-title">IMPORTACIÓN DE DATOS DESDE EXCEL</div>
+    
+    <!-- Instructions -->
+    <div class="instructions-box">
+        <div class="instructions-title">📌 Instrucciones para Importación de Productos:</div>
+        <ul class="instructions-list">
+            <li>Descargue la plantilla Excel haciendo clic en "Descargar Plantilla"</li>
+            <li>Complete la plantilla con los datos de los productos (respete el formato de columnas)</li>
+            <li>Asegúrese de que las categorías y subcategorías ya existan en el sistema</li>
+            <li>Los códigos SKU deben ser únicos (no duplicados)</li>
+            <li>Guarde el archivo Excel (.xlsx, .xls) o CSV</li>
+            <li>Haga clic en "Seleccionar Archivo" y elija el archivo</li>
+            <li>Los productos con errores no se importarán, pero sí los válidos</li>
+        </ul>
+    </div>
+    
+    <!-- Alerta de errores grande -->
+    {% if request.session.errores_importacion %}
+    <div class="custom-errors-alert">
+        <div class="custom-errors-content">
+            <div class="custom-errors-title">
+                <span style="font-size: 32px;">⚠️</span>
+                <span>SE ENCONTRARON {{ request.session.errores_importacion|length }} ERRORES EN LA IMPORTACIÓN</span>
+            </div>
+            <div class="custom-errors-message">
+                ⚡ La importación se completó parcialmente. Los productos válidos fueron procesados correctamente.<br>
+                📋 Algunos registros presentaron errores que requieren corrección. Haga clic en el botón para ver el reporte detallado.
+            </div>
+        </div>
+        <button type="button" class="custom-btn-view-errors" onclick="openErrorModal()">
+            📄 VER REPORTE COMPLETO
+        </button>
+    </div>
+    {% endif %}
+
+    <!-- Upload Section -->
+    <form method="POST" enctype="multipart/form-data" id="upload-form">
+        {% csrf_token %}
+        <div class="upload-section">
+            <div class="upload-icon">📂</div>
+            <div class="upload-title">Cargar Archivo de Productos</div>
+            <div class="upload-subtitle">Formatos aceptados: .xlsx, .xls, .csv | Tamaño máximo: 10 MB</div>
+            <div class="upload-buttons">
+                <label for="file-input" class="btn-upload" style="cursor: pointer;">
+                    📤 Seleccionar Archivo
+                </label>
+                <input type="file" id="file-input" name="archivo" accept=".xlsx,.xls,.csv" style="display: none;" onchange="showFileInfo(this)">
+                <a href="{% url 'inventario:descargar_plantilla' %}" class="btn-template">
+                    ⬇️ Descargar Plantilla
+                </a>
+            </div>
+        </div>
+        
+        <!-- File Info -->
+        <div class="file-info" id="file-info">
+            <div class="file-name" id="file-name">📄 Archivo cargado: </div>
+            <div class="file-details" id="file-details"></div>
+        </div>
+
+        <!-- Submit Section -->
+        <div class="submit-section" id="submit-section" style="display: none;">
+            <button type="submit" class="btn-submit">✓ IMPORTAR PRODUCTOS</button>
+            <a href="{% url 'inventario:importar_productos' %}?limpiar=1" class="btn-cancel">✕ Cancelar</a>
+        </div>
+    </form>
+    
+    <!-- Template Example -->
+    <div class="template-example">
+        <div class="template-title">📋 FORMATO DE PLANTILLA EXCEL (Ejemplo):</div>
+        <div class="excel-preview">
+            <div class="excel-header">
+                <div>codigo_sku</div>
+                <div>nombre</div>
+                <div>categoria</div>
+                <div>subcategoria</div>
+                <div>descripcion</div>
+                <div>precio</div>
+                <div>stock</div>
+            </div>
+            <div class="excel-row">
+                <div class="excel-cell excel-cell-code">MC-0001</div>
+                <div class="excel-cell">Starter Deck Digimon TCG</div>
+                <div class="excel-cell">Decks</div>
+                <div class="excel-cell">Digimon</div>
+                <div class="excel-cell">Deck de inicio para principiantes</div>
+                <div class="excel-cell">15990</div>
+                <div class="excel-cell">10</div>
+            </div>
+            <div class="excel-row">
+                <div class="excel-cell excel-cell-code">MC-0002</div>
+                <div class="excel-cell">Sobre Pokemon Escarlata</div>
+                <div class="excel-cell">Sobres</div>
+                <div class="excel-cell">Pokemon</div>
+                <div class="excel-cell">Sobre de expansión</div>
+                <div class="excel-cell">4500</div>
+                <div class="excel-cell">50</div>
+            </div>
+            <div class="excel-row">
+                <div class="excel-cell excel-cell-code">MC-0003</div>
+                <div class="excel-cell">Figura Luffy Gear 5</div>
+                <div class="excel-cell">Figuras</div>
+                <div class="excel-cell">One Piece</div>
+                <div class="excel-cell">Figura coleccionable 20cm</div>
+                <div class="excel-cell">45990</div>
+                <div class="excel-cell">5</div>
+            </div>
+        </div>
+        <div style="margin-top: 15px; padding: 12px; background: #e8f0ff; border-radius: 4px; font-size: 12px; color: #2e5c8a;">
+            <strong>📝 Notas importantes:</strong><br>
+            • Las columnas <strong>codigo_sku, nombre, categoria y precio</strong> son obligatorias<br>
+            • Las categorías y subcategorías deben existir previamente en el sistema<br>
+            • Los códigos SKU deben ser únicos (no se pueden repetir)<br>
+            • Si no especifica stock, se asignará 0 por defecto
+        </div>
+    </div>
+</div>
+
+<!-- Modal de errores -->
+{% if request.session.errores_importacion %}
+<div class="modal-overlay" id="errorModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div class="modal-title">
+                <span style="font-size: 32px;">⚠️</span>
+                <span>REPORTE DETALLADO DE ERRORES</span>
+            </div>
+            <button type="button" class="modal-close" onclick="closeErrorModal()">×</button>
+        </div>
+        
+        <div class="modal-body">
+            <div class="error-summary">
+                <strong>📊 Resumen de Importación</strong>
+                Se encontraron <strong style="color: #dc3545;">{{ request.session.errores_importacion|length }} errores</strong> durante el proceso de importación.<br>
+                Los productos sin errores fueron importados correctamente. Revise y corrija los siguientes problemas:
+            </div>
+            
+            <div class="errors-container">
+                {% for error in request.session.errores_importacion %}
+                <div class="error-item-modal">
+                    <span class="error-number">{{ forloop.counter }}</span>
+                    <span class="error-text">{{ error }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            
+            {% if request.session.errores_importacion|length >= 20 %}
+            <div style="margin-top: 25px; padding: 18px; background: #fff9e6; border: 2px solid #f0d06c; border-radius: 6px; color: #856404; font-size: 14px; text-align: center;">
+                <strong style="font-size: 15px;">ℹ️ Mostrando los primeros 20 errores</strong><br>
+                Revise y corrija estos errores antes de volver a importar el archivo.
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="modal-footer">
+            <button type="button" class="btn-modal-close" onclick="closeErrorModal()">
+                ✓ CERRAR REPORTE
+            </button>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+function showFileInfo(input) {
+    const fileInfo = document.getElementById('file-info');
+    const fileName = document.getElementById('file-name');
+    const fileDetails = document.getElementById('file-details');
+    const submitSection = document.getElementById('submit-section');
+    
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const fileSize = (file.size / 1024).toFixed(2);
+        
+        fileName.textContent = '📄 Archivo cargado: ' + file.name;
+        fileDetails.textContent = `Tamaño: ${fileSize} KB | Tipo: ${file.type || 'Desconocido'}`;
+        
+        fileInfo.classList.add('active');
+        submitSection.style.display = 'block';
+    }
+}
+
+function openErrorModal() {
+    const modal = document.getElementById('errorModal');
+    if (modal) {
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function closeErrorModal() {
+    const modal = document.getElementById('errorModal');
+    if (modal) {
+        modal.classList.remove('active');
+        document.body.style.overflow = 'auto';
+    }
+}
+
+// Cerrar modal con tecla ESC
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeErrorModal();
+    }
+});
+
+// Cerrar modal al hacer click fuera del contenido
+document.addEventListener('click', function(e) {
+    const modal = document.getElementById('errorModal');
+    if (e.target === modal) {
+        closeErrorModal();
+    }
+});
+{% endblock %}
